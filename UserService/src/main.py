@@ -2,10 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-
-from .routes import UserController
-
 import logging
+
+from UserService.src.logging_config import setup_logging
+from UserService.src.middleware.transaction_id_middleware import TransactionIdMiddleware
+from .routes import UserController
+from .exceptions import BaseAppException
+
+setup_logging()
 logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +36,19 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"]
 )
 
+# Enable Transaction ID middleware
+app.add_middleware(TransactionIdMiddleware)
+
+# Global exception handler
+@app.exception_handler(BaseAppException)
+async def app_exception_handler(request, exc):
+    logger.error("Application error: %s", exc.message)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.message}
+    )
+
+# Routers
 app.include_router(UserController.router)
 
 # We include our UserController in our FastAPI app to make the endpoints accessible.

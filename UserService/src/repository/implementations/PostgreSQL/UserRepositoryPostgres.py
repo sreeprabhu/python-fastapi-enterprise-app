@@ -1,6 +1,10 @@
 
+from UserService.src.exceptions import BaseAppException, ResourceNotFoundException
 from UserService.src.repository.interfaces.UserRepositoryInterface import UserRepositoryInterface
 from UserService.src.schemas import UserSchema
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserRepository(UserRepositoryInterface):
     def __init__(self, db = None):
@@ -9,11 +13,29 @@ class UserRepository(UserRepositoryInterface):
     async def get_user(
         self, email:str
         ) -> UserSchema.User:
+
+        # Dummy logging - log method was called
+        logger.info("PostgreSQL: get_user method called")
         
-        return UserSchema.User(
-            email=email,
-            is_active=True
-        )
+        try:
+            # Dummy exception
+            if email == "nonexistent@example.com":
+                logger.warning(f"User with email {email} not found")
+                raise ResourceNotFoundException(f"User with email {email} not found")
+            
+            return UserSchema.User(
+                email=email,
+                is_active=True
+            )
+        
+        # Catch the ResourceNotFoundException and raise to other layers
+        except ResourceNotFoundException:
+            raise
+
+        # Catch the Uncaught exception and raise to other layers as BaseAppException
+        except Exception as e:
+            logger.exception(f"Error getting user: {str(e)}")
+            raise BaseAppException(f"Internal database error: {str(e)}") from e
 
     async def create_user(
         self,

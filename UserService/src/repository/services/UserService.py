@@ -1,8 +1,11 @@
 
+from UserService.src.exceptions import BaseAppException, ResourceNotFoundException
 from UserService.src.repository.interfaces import UserRepositoryInterface
 from UserService.src.repository.utils.UserPasswordManager import saltAndHashedPW
 from UserService.src.schemas import UserSchema
+import logging
 
+logger = logging.getLogger(__name__)
 class UserService:
     def __init__(self, user_repository: UserRepositoryInterface):
         self.user_repository: UserRepositoryInterface = user_repository
@@ -11,12 +14,21 @@ class UserService:
         self,
         email:str,
     ) -> UserSchema.UserResponse:
-        user: UserSchema.User = await self.user_repository.get_user(email)
+        
+        logger.info("UserService: get_user method called")
+        try:
+            user = await self.user_repository.get_user(email)
+            return UserSchema.UserResponse(
+                email=user.email,
+                is_active=user.is_active
+            )
 
-        return UserSchema.UserResponse(
-            email=user.email,
-            is_active=user.is_active
-        )
+        except ResourceNotFoundException:
+            raise #Re-raise from repository layer
+
+        except Exception as e:
+            logger.exception(f"Error getting user: {str(e)}")
+            raise BaseAppException(f"Error getting user: {str(e)}") from e
     
     async def create_user(
         self,
