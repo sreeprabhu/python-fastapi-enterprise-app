@@ -1,0 +1,37 @@
+###########################################
+# BUILDER stage
+###########################################
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+ENV UV_PYTHON_DOWNLOADS=0
+
+# Set workdir to /app so UserService will live at /app/UserService
+WORKDIR /app
+
+# Copy only lock and pyproject first (assumes they're in UserService/)
+COPY pyproject.toml uv.lock ./
+
+# Create and populate virtualenv
+RUN uv venv
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
+
+# Now copy all source code
+ADD . /app/UserService
+
+# Re-check dependencies (for editable installs, etc)
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
+
+###########################################
+# PRODUCTION stage
+###########################################
+FROM python:3.13-slim-bookworm AS production
+
+# Copy everything from builder stage
+COPY --from=builder --chown=app:app /app /app
+
+# Set environment to find the UserService package at /app/UserService
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app"
+
+# Command (important: UserService is now at /app/UserService)
+CMD ["uvicorn", "UserService.src.main:app", "--host", "0.0.0.0", "--port", "8000"]
