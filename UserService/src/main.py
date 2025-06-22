@@ -2,10 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 import logging
 
+from UserService.src.db.settings import DatabaseType, get_settings
 from UserService.src.logging_config import setup_logging
 from UserService.src.middleware.transaction_id_middleware import TransactionIdMiddleware
+
 from .routes import UserController
 from .exceptions import BaseAppException
 
@@ -15,6 +18,20 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup code (runs before application startup)
     logger.info("Running startup tasks...")
+
+    # Initialize settings
+    settings = get_settings()
+    if settings.DATABASE_TYPE == DatabaseType.POSTGRES:
+        # Create an async engine
+        engine = create_async_engine(settings.POSTGRES_DATABASE_URL, echo=True, future=True)
+
+        # Create an async sessionmaker factory - we can now request the app.state.postgres_session from other parts of our code to generate a new async Session to interact with our database.
+        app.state.postgres_session = async_sessionmaker(
+            bind=engine,
+            expire_on_commit=False,  # optional: objects stay active after commit
+            class_=AsyncSession
+        )
+
     logger.info("Startup tasks completed")
     yield
     # Shutdown code (runs after application shutdown)

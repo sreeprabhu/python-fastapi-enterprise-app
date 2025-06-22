@@ -22,6 +22,17 @@ ADD . /app/UserService
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
 
 ###########################################
+# FULL-TEST stage
+###########################################
+FROM builder AS full-test
+
+# Install test dependencies
+RUN --mount=type=cache,target=/root/.cache/uv uv sync
+
+# Optionally, run tests or leave that to runtime
+# CMD ["pytest", "tests"]
+
+###########################################
 # PRODUCTION stage
 ###########################################
 FROM python:3.13-slim-bookworm AS production

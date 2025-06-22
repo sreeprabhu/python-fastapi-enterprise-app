@@ -1,7 +1,7 @@
 import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from src.middleware.transaction_context import set_transaction_id
+from UserService.src.middleware.transaction_context import set_transaction_id
 
 class TransactionIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):

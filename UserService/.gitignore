@@ -1,0 +1,16 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+
+# Environment
+.env
+
+# pyright/mypy/ruff artifacts
+.pyright/
+.mypy_cache/
+ruff_cache/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

@@ -1,13 +1,16 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
 from UserService.src.exceptions import BaseAppException, ResourceNotFoundException
+from UserService.src.repository.implementations.PostgreSQL.models import UserORM
 from UserService.src.repository.interfaces.UserRepositoryInterface import UserRepositoryInterface
 from UserService.src.schemas import UserSchema
-import logging
 
 logger = logging.getLogger(__name__)
 
 class UserRepository(UserRepositoryInterface):
-    def __init__(self, db = None):
+    def __init__(self, db = AsyncSession):
         self.db = db
 
     async def get_user(
@@ -18,16 +21,19 @@ class UserRepository(UserRepositoryInterface):
         logger.info("PostgreSQL: get_user method called")
         
         try:
-            # Dummy exception
-            if email == "nonexistent@example.com":
+            stmt = select(UserORM).where(UserORM.email == email)
+            result = await self.db.execute(stmt)
+            db_user = result.scalar_one_or_none()
+
+            if db_user:    
+                return UserSchema.User(
+                    email=db_user.email,
+                    is_active=db_user.is_active
+                )
+            else:
                 logger.warning(f"User with email {email} not found")
                 raise ResourceNotFoundException(f"User with email {email} not found")
-            
-            return UserSchema.User(
-                email=email,
-                is_active=True
-            )
-        
+
         # Catch the ResourceNotFoundException and raise to other layers
         except ResourceNotFoundException:
             raise
